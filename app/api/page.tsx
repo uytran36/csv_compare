@@ -2,6 +2,7 @@
 import React, { useState, ChangeEvent, useRef } from "react";
 import Papa from "papaparse";
 import dayjs from "dayjs";
+import { deepCompareObjects } from "../utils/deepCompare";
 
 export default function Home() {
   const [dict, setDict] = useState<any[] | null>(null);
@@ -62,11 +63,19 @@ export default function Home() {
         return regex.test(dateString);
       };
 
+      const isValidFloat = (floatString: string): boolean => {
+        const regex = /^\d+(\.\d+)?$/;
+        return regex.test(floatString);
+      };
+
       Object.keys(obj).forEach((key) => {
         if (obj[key] === "" || obj[key] === null) {
           mappedObj[key] = "";
         } else if (isValidDateFormat(obj[key])) {
           mappedObj[key] = dayjs(obj[key]).format("YYYY-MM-DD HH:mm:ss.SSS");
+        } else if (isValidFloat(obj[key]) && obj[key].includes(".00")) {
+          // remove .00 in float number
+          mappedObj[key] = obj[key].replace(".00", "");
         } else {
           mappedObj[key] = obj[key];
         }
@@ -79,24 +88,9 @@ export default function Home() {
       mappedJsonData.push(mapJsonData(row));
     });
 
-    const sortObjectKeys = (obj: Record<string, any>): Record<string, any> => {
-      return Object.keys(obj)
-        .sort()
-        .reduce((result: Record<string, any>, key: string) => {
-          result[key] = obj[key];
-          return result;
-        }, {});
-    };
-
-    const deepCompareObjects = (
-      obj1: Record<string, any>,
-      obj2: Record<string, any>
-    ): boolean => {
-      const sortedObj1 = sortObjectKeys(obj1);
-      const sortedObj2 = sortObjectKeys(obj2);
-
-      return JSON.stringify(sortedObj1) === JSON.stringify(sortedObj2);
-    };
+    console.log(mappedData);
+    console.log("-------------------");
+    console.log(mappedJsonData);
 
     if (!!jsonData && !!csvData) {
       let errorRows: any[] = [];
