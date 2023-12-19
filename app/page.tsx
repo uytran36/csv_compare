@@ -1,5 +1,7 @@
 "use client";
+import Papa from "papaparse";
 import React, { useState, ChangeEvent, useRef } from "react";
+import { deepCompareObjects } from "./utils/deepCompare";
 
 export default function Home() {
   const [csvDataUp, setCsvDataUp] = useState<any[] | null>(null);
@@ -15,43 +17,37 @@ export default function Home() {
     const file = event.target.files?.[0];
     let rows: any[] = [];
 
-    if (file) {
-      rows = (await file.text()).split("\n").filter((row, i) => i !== 0);
-      for (let i = 0; i <= rows.length; i++) {
-        if (rows[i] === undefined) {
-          continue;
+    if(file) {
+      Papa.parse(file, {
+        header: true,
+        complete: function (results) {
+          rows = results.data;
+          if (side === "up") {
+            setCsvDataUp(rows);
+          } else {
+            setCsvDataDown(rows);
+          }
         }
-        let dataInRow = rows[i]
-          .split(",")
-          .filter(
-            (row: any) =>
-              row !== '""' && row !== undefined && row !== "" && row !== "\r"
-          )
-          .map((row: any) => row.replace(/(\r\n|\n|\r)/gm, ""));
-        console.log(dataInRow);
-        dataInRow.sort();
-
-        rows[i] = dataInRow.join(",");
-      }
-
-      if (side === "up") {
-        setCsvDataUp(rows.sort());
-      } else {
-        setCsvDataDown(rows.sort());
-      }
-    }
-  };
+      })
+  }
 
   const compare = () => {
-    if (JSON.stringify(csvDataUp) !== JSON.stringify(csvDataDown)) {
+    if(!!csvDataDown && !!csvDataUp) {
       let errorRows: any[] = [];
-      csvDataUp?.forEach((row, index) => {
-        if (row !== csvDataDown?.[index]) {
-          errorRows.push(
-            JSON.stringify(row) + JSON.stringify(csvDataDown?.[index])
-          );
+
+      
+      for (let i = 0; i < csvDataUp.length; i++) {
+        let isExist = false;
+        for (let j = 0; j < csvDataDown.length; j++) {
+          if (deepCompareObjects(csvDataUp[i], csvDataDown[j])) {
+            isExist = true;
+            continue;
+          }
         }
-      });
+        if (!isExist) {
+          errorRows.push(JSON.stringify(csvDataUp[i]));
+        }
+      }
       setRowError(errorRows);
     } else {
       setRowError([]);
